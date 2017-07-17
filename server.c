@@ -6,7 +6,23 @@
 #include <unistd.h>
 #include <pthread.h>
 
+/* Client structure */
+typedef struct {
+	struct sockaddr_in addr;
+	int connfd;
+	int uid;
+	char name[32];
+} client_t;
+
+#define LIMIT_CLIENTS	100
+
+client_t *clients[100];
+
+
+
 void * connection_handler(void *);
+void queue_add(client_t *);
+
 
 
 int main(int argc , char *argv[])
@@ -50,6 +66,11 @@ int main(int argc , char *argv[])
       {
           puts("Connection accepted");
 
+
+      		client_t *cli = (client_t *)malloc(sizeof(client_t));
+      		cli->connfd = client_sock;
+          queue_add(cli);
+
           pthread_t sniffer_thread;
           new_sock = malloc(1);
           *new_sock = client_sock;
@@ -71,18 +92,47 @@ int main(int argc , char *argv[])
       return 0;
   }
 
+  /* Add client to queue */
+  void queue_add(client_t *cl){
+  	int i;
+
+    for(i=0;i<LIMIT_CLIENTS;i++){
+
+  		if(!clients[i]){
+
+        clients[i] = cl;
+  			return;
+
+      }
+
+  	}
+
+  }
+
   void * connection_handler(void * socket_desc)
   {
     int sock = *(int *) socket_desc;
     int read_size;
     char *message, client_message[2000];
 
-    message = "Bienvenue sur notre serveur";
-    write(sock,message ,strlen(message));
+    //message = "Bienvenue sur notre serveur";
+    //write(sock,message ,strlen(message));
+
+    client_message[0] = "/0";
 
     while((read_size) = recv(sock,client_message,2000,0) > 0 )
     {
-      write(sock,client_message, strlen(client_message));
+
+      int i;
+
+      for(i=0;i<LIMIT_CLIENTS;i++) {
+            if(clients[i]) {
+                write(clients[i]->connfd,client_message, strlen(client_message));
+            }
+      }
+
+
+      //write(sock,client_message, strlen(client_message));
     }
     if(read_size == 0)
     {
